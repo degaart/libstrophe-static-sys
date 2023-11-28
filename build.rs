@@ -1,7 +1,7 @@
 #![allow(unused)]
 
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::{env, path::PathBuf};
 use std::fs;
 
@@ -20,7 +20,6 @@ fn main() {
     let prefix = out_dir.join("prefix");
 
     println!("cargo:rerun-if-changed={TARBALL}");
-    println!("cargo:rustc-link-search={}", prefix.join("lib").display());
 
     if !prefix.join("include").join("strophe.h").exists() {
         let ret = Command::new("tar")
@@ -28,6 +27,7 @@ fn main() {
             .arg(TARBALL)
             .arg("-C")
             .arg(&out_dir)
+            .stdout(Stdio::null())
             .status()
             .unwrap();
         if !ret.success() {
@@ -46,6 +46,7 @@ fn main() {
             .arg("--with-pic")
             .arg(&format!("--prefix={}", prefix.display()))
             .current_dir(&out_dir)
+            .stdout(Stdio::null())
             .status()
             .unwrap();
         if !ret.success() {
@@ -55,6 +56,7 @@ fn main() {
         let ret = Command::new("make")
             .arg(&format!("-j{}", num_cpus::get()))
             .current_dir(&out_dir)
+            .stdout(Stdio::null())
             .status()
             .unwrap();
         if !ret.success() {
@@ -64,11 +66,16 @@ fn main() {
         let ret = Command::new("make")
             .arg("install")
             .current_dir(&out_dir)
+            .stdout(Stdio::null())
             .status()
             .unwrap();
         if !ret.success() {
             panic!("install failed");
         }
     }
+
+    println!("cargo:rustc-link-search={}", prefix.join("lib").display());
+    println!("cargo:prefix={}", prefix.display());
+    println!("cargo:link_libs=expat,resolv");
 }
 
